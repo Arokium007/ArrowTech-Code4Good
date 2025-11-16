@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agri-Sentinel Dual Interface Platform</title>
+    <!-- We link to the same style.css file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="interface-body">
+    <!-- This is the main container for the slider -->
+    <div class="container" id="container">
+        
+        <!-- Web App Panel -->
+        <div class="form-container sign-up-container">
+            <div class="form">
+                <h1>Web Application</h1>
+                <p class="interface-p">Experience the full power of our diagnostic tool. Get detailed solutions, vendor maps, and help train our AI by submitting images for review.</p>
+                <!-- This is a real link to your /app page -->
+                <a href="/app" class="interface-button">Launch Web App</a>
+            </div>
+        </div>
+
+        <!-- WhatsApp Panel -->
+        <div class="form-container sign-in-container">
+            <div class="form">
+                <h1>WhatsApp Bot</h1>
+                <p class="interface-p">Get instant, on-the-go diagnosis directly in your chat. Just scan the code below with your phone's camera to start a conversation.</p>
+                <!-- 
+                  QR Code Generator. 
+                  IMPORTANT: Replace "+23012345678" with your WhatsApp Business phone number.
+                -->
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://wa.me/23055012571" 
+                     alt="WhatsApp QR Code" class="qr-code">
+            </div>
+        </div>
+
+        <!-- Overlay Panel (The part that slides) -->
+        <div class="overlay-container">
+            <div class="overlay">
+                <!-- Left Overlay (Slides over WhatsApp) -->
+                <div class="overlay-panel overlay-left">
+                    <h1>WhatsApp</h1>
+                    <p class="interface-p">Clear accessibility use our WhatsApp interface.</p>
+                    <button class="ghost" id="signIn">Use WhatsApp</button>
+                </div>
+                <!-- Right Overlay (Slides over Web App) -->
+                <div class="overlay-panel overlay-right">
+                    <h1>Web App</h1>
+                    <p class="interface-p">For the most detailed solutions and features, launch our full web application.</p>
+                    <button class="ghost" id="signUp">Launch Web App</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for the slider animation -->
+    <script>
+        const signUpButton = document.getElementById('signUp');
+        const signInButton = document.getElementById('signIn');
+        const container = document.getElementById('container');
+
+        signUpButton.addEventListener('click', () => {
+            container.classList.add("right-panel-active");
+        });
+
+        signInButton.addEventListener('click', () => {
+            container.classList.remove("right-panel-active");
+        });
+    </script>
+</body>
+</html>

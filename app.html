@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agri-Sentinel | Diagnosis</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gray-50">
+
+    <!-- App-specific Navbar -->
+    <nav class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/" class="text-2xl font-bold text-gray-900 flex items-center">
+                <svg class="w-8 h-8 text-[#2EC1AC] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Agri-Sentinel
+            </a>
+            
+            <!-- MODIFIED: Added Admin Panel Link -->
+            <div class="space-x-6 flex items-center">
+                <a href="/admin" class="text-gray-600 hover:text-[#2EC1AC] font-medium transition-colors">Admin Panel</a>
+                <a href="/" class="text-gray-600 hover:text-[#2EC1AC] font-medium transition-colors">Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Application Section -->
+    <section id="app" class="py-16 bg-gray-50">
+        <div class="max-w-6xl mx-auto px-6">
+            
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">Start Your Diagnosis</h2>
+                <p class="text-lg text-gray-600">
+                    Get an instant analysis and solution in three simple steps.
+                </p>
+            </div>
+
+            <div class="bg-white border border-gray-200 shadow-xl rounded-lg p-6 md:p-8 mb-8 max-w-3xl mx-auto">
+                <form id="upload-form" class="space-y-6">
+                    
+                    <div>
+                        <label for="crop-select" class="block text-lg font-semibold text-gray-800 mb-2">
+                            Step 1: What crop are you scanning?
+                        </label>
+                        <select id="crop-select" name="crop_key" required class="app-dropdown">
+                            <option value="" disabled selected>-- Please select a crop --</option>
+                            {% for crop in crops %}
+                                <option value="{{ crop.key }}">{{ crop.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="file-upload" class="block text-lg font-semibold text-gray-800 mb-2">
+                            Step 2: Upload an image of the disease
+                        </label>
+                        <input id="file-upload" name="file" type="file" accept="image/*" required class="app-file-input"/>
+                    </div>
+                    
+                    <div id="image-preview-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">Image Preview:</label>
+                        <img id="image-preview" src="#" alt="Your uploaded image" class="rounded-lg max-h-64 mx-auto shadow-md"/>
+                    </div>
+
+                    <button type="submit" id="diagnose-btn"
+                            class="w-full bg-[#2EC1AC] hover:bg-[#259A88] text-white font-bold py-4 px-4 rounded-lg
+                                   text-lg transition duration-300 ease-in-out transform hover:-translate-y-1">
+                        Diagnose Plant
+                    </button>
+                </form>
+                
+                <div id="loader" class="hidden flex-col items-center justify-center p-8">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-lg text-blue-600">Analyzing Image... Please wait.</p>
+                </div>
+
+                <div id="error-message" class="hidden p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg"></div>
+            </div>
+
+            <!-- Results Section (Hidden by default) -->
+            <div id="results-section" class="hidden mt-12">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Diagnostic Results</h2>
+                <div class="flex flex-col lg:flex-row gap-8">
+                    
+                    <div class="lg:w-1/3 space-y-6">
+                        <div class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-800">Your Image</h3>
+                            <img id="uploaded-image" src="" alt="Uploaded Plant" class="rounded-md w-full">
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-3 text-gray-800">Top 3 Predictions:</h3>
+                            <div id="predictions-list" class="space-y-2">
+                                <!-- JS will inject prediction buttons here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="lg:w-2/3">
+                        <div id="solution-placeholder" class="h-full flex items-center justify-center bg-gray-50 p-8 rounded-lg shadow-lg border border-gray-200 border-dashed">
+                            <p class="text-gray-500 text-lg text-center">Click on a prediction to see the detailed solution.</p>
+                        </div>
+                        
+                        <div id="solution-display" class="hidden">
+                            <div id="solution-header" class="solution-card p-6 rounded-lg shadow-lg mb-6">
+                                <h2 id="solution-disease-name" class="text-3xl font-bold mb-2 text-gray-900"></h2>
+                                <p id="solution-crop" class="text-lg text-gray-600 mb-4"></p>
+                                <p id="solution-description" class="text-gray-700"></p>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <button id="toggle-organic" class="accordion-button">
+                                        <span class="text-lg font-semibold">🌿 Organic Solution</span>
+                                        <span class="accordion-icon">+</span>
+                                    </button>
+                                    <div id="content-organic" class="accordion-content"></div>
+                                </div>
+                                <div>
+                                    <button id="toggle-chemical" class="accordion-button">
+                                        <span class="text-lg font-semibold">🧪 Chemical Solution</span>
+                                        <span class="accordion-icon">+</span>
+                                    </button>
+                                    <div id="content-chemical" class="accordion-content"></div>
+                                </div>
+                                <div>
+                                    <button id="toggle-prevention" class="accordion-button">
+                                        <span class="text-lg font-semibold">🛡️ Prevention Tips</span>
+                                        <span class="accordion-icon">+</span>
+                                    </button>
+                                    <div id="content-prevention" class="accordion-content"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- MODIFIED: Action Buttons are now functional -->
+                            <div class="mt-8 pt-6 border-t border-gray-200 flex flex-col sm:flex-row gap-4">
+                                <button id="market-btn" class="action-button-primary">Request on Market Place</button>
+                                <button id="admin-btn" class="action-button-secondary">Send to Admin for Review</button>
+                            </div>
+                            <div id="admin-success-msg" class="hidden mt-4 text-green-600 font-medium">
+                                Successfully submitted for admin review!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // --- State variables to hold results ---
+        let currentImageUrl = "";
+        let currentAiGuess = "";
+    
+        // --- Get DOM Elements ---
+        const uploadForm = document.getElementById('upload-form');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+        const resultsSection = document.getElementById('results-section');
+        const uploadedImage = document.getElementById('uploaded-image');
+        const predictionsList = document.getElementById('predictions-list');
+        const solutionPlaceholder = document.getElementById('solution-placeholder');
+        const solutionDisplay = document.getElementById('solution-display');
+        const fileUpload = document.getElementById('file-upload');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        
+        // --- Image Preview Logic ---
+        fileUpload.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.setAttribute('src', e.target.result);
+                    imagePreviewContainer.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreviewContainer.classList.add('hidden');
+            }
+        });
+
+        // --- Form Submit Logic ---
+        uploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            resultsSection.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            solutionDisplay.classList.add('hidden');
+            solutionPlaceholder.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+            uploadForm.classList.add('hidden');
+            imagePreviewContainer.classList.add('hidden'); 
+            document.getElementById('admin-success-msg').classList.add('hidden');
+
+            const formData = new FormData(this);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Prediction failed.');
+                displayResults(data);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                uploadForm.classList.remove('hidden'); 
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = `Error: ${message}`;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function displayResults(data) {
+            resultsSection.classList.remove('hidden');
+            uploadedImage.src = data.image_url;
+            predictionsList.innerHTML = ''; 
+            
+            // Store results globally for the admin button
+            currentImageUrl = data.image_url;
+            currentAiGuess = data.predictions[0].full_class_name; // Store the top prediction
+
+            if (data.predictions && data.predictions.length > 0) {
+                data.predictions.forEach((pred, index) => {
+                    const button = document.createElement('button');
+                    button.className = `prediction-button ${
+                        index === 0 ? 'prediction-button-best' : 'prediction-button-other'
+                    }`;
+                    button.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">${pred.disease_name}</span>
+                            <span class="text-sm font-bold">${pred.confidence}%</span>
+                        </div>
+                    `;
+                    button.dataset.className = pred.full_class_name;
+                    button.onclick = () => fetchSolution(pred.full_class_name, button);
+                    predictionsList.appendChild(button);
+                });
+                
+                fetchSolution(data.predictions[0].full_class_name, predictionsList.firstChild);
+                
+            } else {
+                 predictionsList.innerHTML = `<p class="text-gray-500">Could not identify a disease. Try a clearer photo.</p>`;
+                 solutionPlaceholder.classList.remove('hidden');
+                 solutionDisplay.classList.add('hidden');
+            }
+        }
+
+        async function fetchSolution(className, clickedButton) {
+            document.querySelectorAll('.prediction-button').forEach(btn => {
+                btn.classList.remove('prediction-button-best');
+                btn.classList.add('prediction-button-other');
+            });
+            clickedButton.classList.add('prediction-button-best');
+            clickedButton.classList.remove('prediction-button-other');
+
+            solutionPlaceholder.classList.add('hidden');
+            solutionDisplay.classList.remove('hidden');
+            
+            document.getElementById('solution-header').innerHTML = '<div class="flex justify-center p-12"><div class="loader"></div></div>';
+            document.getElementById('content-organic').innerHTML = '';
+            document.getElementById('content-chemical').innerHTML = '';
+            document.getElementById('content-prevention').innerHTML = '';
+            
+            document.querySelectorAll('.accordion-content').forEach(el => el.style.maxHeight = null);
+            document.querySelectorAll('.accordion-icon').forEach(el => el.textContent = '+');
+            document.getElementById('admin-success-msg').classList.add('hidden');
+            
+            // Store this as the new "top guess" if the user clicks a different one
+            currentAiGuess = className; 
+
+            try {
+                const response = await fetch('/solution', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ class_name: className })
+                });
+                const solution = await response.json();
+                if (!response.ok) throw new Error(solution.error || 'Could not fetch solution.');
+                displaySolution(solution);
+            } catch (error) {
+                document.getElementById('solution-header').innerHTML = `<div class="p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">${error.message}</div>`;
+            }
+        }
+        
+        function displaySolution(solution) {
+            document.getElementById('solution-header').innerHTML = `
+                <h2 class="text-3xl font-bold mb-2 text-gray-900">${solution.disease_name}</h2>
+                <p class="text-lg text-gray-600 mb-4"><strong>Crop:</strong> ${solution.crop}</p>
+                <p class="text-gray-700">${solution.description}</p>
+            `;
+
+            // Populate accordions
+            const organicContent = document.getElementById('content-organic');
+            organicContent.innerHTML = `<div class="accordion-content-padding">${generateProductHTML(solution.organic_solution, 'organic')}</div>`;
+
+            const chemicalContent = document.getElementById('content-chemical');
+            chemicalContent.innerHTML = `<div class="accordion-content-padding">${generateProductHTML(solution.chemical_solution, 'chemical')}</div>`;
+            
+            const preventionContent = document.getElementById('content-prevention');
+            preventionContent.innerHTML = `
+                <div class="accordion-content-padding">
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        ${solution.prevention_tips.map(tip => `<li>${tip}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function generateProductHTML(solutionData, type) {
+            let color = type === 'organic' ? 'green' : 'red';
+            let html = `<p class="text-sm text-gray-600 italic mb-4"><strong>Strategy:</strong> ${solutionData.strategy}</p>
+                        <div class="space-y-3">`;
+            
+            html += solutionData.products.map(p => `
+                <div class="product-card">
+                    <strong class="text-${color}-800">${p.name}</strong>
+                    <p class="text-sm text-gray-600">${p.details}</p>
+                    ${p.chemical_group ? `<p class="text-xs text-gray-500 mt-1">Group: ${p.chemical_group}</p>` : ''}
+                    ${p.vendor !== 'On-Farm Action' && p.vendor !== 'N/A' ? `
+                    <div class="mt-2">
+                        <a href="${p.map_link}" target="_blank" rel="noopener noreferrer" class="vendor-button">
+                            Find Vendor: ${p.vendor}
+                        </a>
+                    </div>` : ''}
+                </div>
+            `).join('');
+            
+            html += `</div>`;
+            return html;
+        }
+        
+        // --- Accordion Logic ---
+        document.querySelectorAll('.accordion-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                const icon = button.querySelector('.accordion-icon');
+                const isOpen = content.style.maxHeight;
+                
+                // Close all accordions
+                document.querySelectorAll('.accordion-content').forEach(el => el.style.maxHeight = null);
+                document.querySelectorAll('.accordion-button').forEach(btn => {
+                    btn.classList.remove('open');
+                    btn.querySelector('.accordion-icon').textContent = '+';
+                });
+                
+                // Open the clicked one if it was closed
+                if (!isOpen) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    icon.textContent = '−';
+                    button.classList.add('open');
+                }
+            });
+        });
+        
+        // --- NEW: Admin Button Logic ---
+        document.getElementById('admin-btn').addEventListener('click', async () => {
+            const adminBtn = document.getElementById('admin-btn');
+            adminBtn.disabled = true;
+            adminBtn.textContent = 'Submitting...';
+            
+            try {
+                const response = await fetch('/api/submit_review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_url: currentImageUrl,
+                        ai_guess: currentAiGuess
+                    })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                
+                document.getElementById('admin-success-msg').classList.remove('hidden');
+                adminBtn.textContent = 'Submitted!';
+                
+            } catch (error) {
+                console.error("Failed to submit for review:", error);
+                adminBtn.textContent = 'Submission Failed';
+                adminBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

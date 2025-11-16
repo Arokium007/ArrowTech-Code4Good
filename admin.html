@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Agri-Sentinel</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="bg-gray-100">
+
+    <nav class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="/admin" class="text-2xl font-bold text-gray-900 flex items-center">
+                <svg class="w-8 h-8 text-[#2EC1AC] mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                Agri-Sentinel <span class="ml-4 text-sm font-normal text-gray-500">Admin Panel</span>
+            </a>
+            
+            <div class="space-x-6 flex items-center">
+                <a href="/app" class="text-gray-600 hover:text-[#2EC1AC] font-medium transition-colors">Launch App</a>
+                <a href="/" class="text-gray-600 hover:text-[#2EC1AC] font-medium transition-colors">Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6 lg:p-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-8">Image Review Queue</h1>
+
+        <div id="admin-loader" class="flex flex-col items-center justify-center p-20">
+            <div class="loader"></div>
+            <p class="mt-4 text-lg text-blue-600">Loading review queue...</p>
+        </div>
+
+        <div id="admin-empty-state" class="hidden flex items-center justify-center p-20 bg-white rounded-lg shadow-md border">
+            <svg class="w-16 h-16 text-green-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-2xl font-medium text-gray-600">All caught up! The review queue is empty.</h2>
+        </div>
+
+        <div id="review-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('review-grid');
+            const loader = document.getElementById('admin-loader');
+            const emptyState = document.getElementById('admin-empty-state');
+            
+            // This 'crops' variable is passed from Flask
+            const cropList = {{ crops | tojson }};
+
+            // Function to create the <select> dropdown for crops
+            function createCropDropdown() {
+                let options = '<option value="" disabled selected>-- Select Crop --</option>';
+                cropList.forEach(crop => {
+                    options += `<option value="${crop.name}">${crop.name}</option>`;
+                });
+                return `
+                    <label for="crop-select" class="admin-label">Correct Crop</label>
+                    <select name="crop" required class="app-dropdown">
+                        ${options}
+                    </select>
+                `;
+            }
+
+            // Function to create a single review card
+            function createReviewCard(item) {
+                const card = document.createElement('div');
+                card.id = `review-card-${item.id}`;
+                card.className = 'admin-review-card';
+                
+                card.innerHTML = `
+                    <img src="${item.image_url}" alt="Review image" class="rounded-t-lg object-cover h-64 w-full">
+                    <div class="p-4">
+                        <p class="text-sm text-gray-500">AI Guess:</p>
+                        <p class="text-md font-medium text-gray-800 mb-4">${item.ai_guess.replace('Balanced ', '').replace(' Dataset', '')}</p>
+                        
+                        <form class="space-y-4" data-id="${item.id}">
+                            <div>
+                                ${createCropDropdown()}
+                            </div>
+                            <div>
+                                <label for="disease-label" class="admin-label">Correct Disease</label>
+                                <input type="text" name="disease" required placeholder="e.g., Anthracnose" class="admin-input">
+                            </div>
+                            <button type="submit" class="action-button-primary w-full">Submit Correction</button>
+                        </form>
+                    </div>
+                `;
+                
+                // Add submit event listener to the form
+                card.querySelector('form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const formData = new FormData(form);
+                    const reviewId = form.dataset.id;
+                    const correctedCrop = formData.get('crop');
+                    const correctedDisease = formData.get('disease');
+                    
+                    try {
+                        const response = await fetch('/api/submit_correction', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: reviewId,
+                                crop: correctedCrop,
+                                disease: correctedDisease
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (!response.ok) throw new Error(data.error);
+                        
+                        // Success: fade out and remove the card
+                        card.style.transition = 'opacity 0.5s ease';
+                        card.style.opacity = '0';
+                        setTimeout(() => card.remove(), 500);
+                        
+                    } catch (error) {
+                        console.error('Failed to submit correction:', error);
+                        alert(`Error: ${error.message}`);
+                    }
+                });
+                
+                return card;
+            }
+
+            // Function to load the queue from the API
+            async function loadReviewQueue() {
+                try {
+                    const response = await fetch('/api/get_review_queue');
+                    const items = await response.json();
+                    
+                    if (!response.ok) throw new Error(items.error);
+                    
+                    grid.innerHTML = ''; // Clear the grid
+                    
+                    if (items.length === 0) {
+                        emptyState.classList.remove('hidden');
+                    } else {
+                        items.forEach(item => {
+                            const card = createReviewCard(item);
+                            grid.appendChild(card);
+                        });
+                        grid.classList.remove('hidden');
+                    }
+                    
+                } catch (error) {
+                    console.error('Failed to load review queue:', error);
+                    emptyState.innerHTML = `<h2 class="text-2xl font-medium text-red-600">Error: ${error.message}</h2>`;
+                    emptyState.classList.remove('hidden');
+                } finally {
+                    loader.classList.add('hidden');
+                }
+            }
+
+            // Initial load
+            loadReviewQueue();
+        });
+    </script>
+</body>
+</html>

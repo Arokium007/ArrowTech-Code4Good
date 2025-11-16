@@ -1,0 +1,26 @@
+[
+  {
+    "id": "48a3240e-a075-43c3-80bb-971e1b33bddf",
+    "image_url": "/uploads/58e8f8b9-cedd-42e2-86fe-3b4478f421c3_ndr212209-fig-0002-m.jpg",
+    "ai_guess": "Balanced Banana Dataset/pestalotiopsis",
+    "status": "reviewed",
+    "corrected_crop": "Mangoo",
+    "corrected_disease": "TEST"
+  },
+  {
+    "id": "784a944b-8c94-4f80-bbb6-b13ca500a778",
+    "image_url": "/uploads/d1347305-ea55-4e0d-a7da-b825cd600e4e_b6c59d5e-9083-4242-bfda-b1be54636907.jpeg",
+    "ai_guess": "Balanced Banana Dataset/cordana",
+    "status": "pending",
+    "corrected_crop": null,
+    "corrected_disease": null
+  },
+  {
+    "id": "632356a6-12a4-42a3-a755-15ad08551d84",
+    "image_url": "/uploads/4c8c2d63-957c-4042-9e66-87d944720949_58e8f8b9-cedd-42e2-86fe-3b4478f421c3_ndr212209-fig-0002-m.jpg",
+    "ai_guess": "Balanced Banana Dataset/pestalotiopsis",
+    "status": "pending",
+    "corrected_crop": null,
+    "corrected_disease": null
+  }
+]
